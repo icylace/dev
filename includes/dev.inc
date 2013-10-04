@@ -1,8 +1,17 @@
 <?php
-
-// =================
-// DEVELOPMENT TOOLS
-// =================
+/**
+ * =================
+ * DEVELOPMENT TOOLS
+ * =================
+ *
+ * These are some functions that aid in the development process.
+ *
+ * @copyright Copyright (c) 2013 Ron Martinez
+ *            Except for `read_last_line()` which is the copyright of its owner.
+ * @license   http://opensource.org/licenses/MIT   MIT License
+ * @version   0.1.0
+ * @link      https://github.com/icylace/dev
+ */
 
 
 define('DEV_LOG',                 '/Users/icylace/others/MAMP PRO Logs/php_error.log');
@@ -51,22 +60,28 @@ function clear_log() {
 
 
 /**
- * Clears the error log before tracing.
- */
-function clear_trace($variable, $label, $multilines_below, $sort_style) {
-  clear_log();
-  trace($variable, $label, $multilines_below, $sort_style);
-}
-
-
-// -----------------------------------------------------------------------------
-
-
-/**
- * Dumps variable data in a custom format.
+ * Renders data into a custom format.
  *
  * Loosely based on:
  * http://php.net/manual/en/function.var-export.php#54440
+ *
+ * @param mixed $data             - The data to render.
+ * @param bool  $multilines_below - Make those parts of the data that will
+ *                                  be formatted on multiple lines to be
+ *                                  sorted at the end.
+ * @param mixed $sort_style       - The type of sorting to employ.
+ *                                  Set to NULL if sorting is not desired.
+ *                                  Standard sort flags are defined here:
+ *                                  ({@link http://us3.php.net/manual/en/function.sort.php})
+ * @param int   $indent_level     - The current indent level.  Usually this
+ *                                  should be left alone.
+ *
+ * @return string - The formatted data.
+ *
+ * @used-by parse_backtrace()
+ * @used-by trace()
+ * @used-by traces()
+ *
  */
 function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_level = 0) {
   $dumping_object = FALSE;
@@ -214,11 +229,22 @@ function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_leve
 
 
 /**
+ * Parses and renders a backtrace.
+ *
  * Based on:
- * http://us2.php.net/manual/en/function.debug-backtrace.php#85915
+ * {@link http://us2.php.net/manual/en/function.debug-backtrace.php#85915}
+ *
+ * @param array $raw_trace        - The backtrace to parse.
+ * @param bool  $args_shown       - Renders arguments as well.
+ * @param bool  $multilines_below - Defined in `dump()`.
+ * @param mixed $sort_style       - Defined in `dump()`.
+ *
+ * @return string - The formatted data.
+ *
+ * @uses dump()
  *
  * Example usage:
- * trace(parse_backtrace(debug_backtrace()));
+ *   trace(parse_backtrace(debug_backtrace()));
  */
 function parse_backtrace($raw_trace, $args_shown = FALSE, $multilines_below = FALSE, $sort_style = SORT_ONE_LINER_VS_ARRAY) {
   $indent_level = 0;
@@ -295,33 +321,22 @@ function step() {
 /**
  * Writes variable data into the error log in a formatted fashion.
  *
- * @param  mixed $variable    - The variable or variables to show.
+ * @param mixed  $data             - Defined in `dump()`.
+ * @param string $label            - The label to associate with the data.
+ * @param bool   $clear            - Clears the error log before tracing.
+ * @param bool   $multilines_below - Defined in `dump()`.
+ * @param mixed  $sort_style       - Defined in `dump()`.
  *
- * @param  mixed $label       - The label to associate with the data.
- *                              If set to NULL and $variable is an array then
- *                              $variable is not just a regular array but
- *                              represents multiple variables to show.
+ * @see traces()
+ * @uses dump()
  *
- * @param  mixed $sort_style  - The type of sorting to employ.
- *                              Set to NULL if sorting is not desired.
- *
- *                              Standard sort flags are defined here:
- *                              http://us3.php.net/manual/en/function.sort.php
- *
- * @return string               The indentation whitespace.
- *
- * Example uses:
+ * Example usage:
  *   trace($var0);
  *   trace($var1, 'variable1');
- *   trace(array(
- *     'variable2' => $var2,
- *     'variable3' => $var3,
- *   ), NULL);
  *
  */
-function trace($variable, $label = FALSE, $multilines_below = FALSE, $sort_style = SORT_ONE_LINER_VS_ARRAY) {
-  $output = array();
-
+function trace($data, $label = '', $clear = FALSE, $multilines_below = FALSE, $sort_style = SORT_ONE_LINER_VS_ARRAY) {
+  $output   = array();
   $output[] = str_repeat(':', 80);
 
   // Show the function that's doing the trace.
@@ -331,20 +346,67 @@ function trace($variable, $label = FALSE, $multilines_below = FALSE, $sort_style
     $output[]      = $function_name . '  ' . str_repeat(':', 105 - strlen($function_name));
   }
 
-  // See if we're tracing multiple variables.
-  if (is_array($variable) && $label === NULL) {
-    foreach ($variable as $key => $value) {
-      $output[] = '';
-      $output[] = ($key && is_string($key) ? $key . '  «  ' : '') . dump($value, $multilines_below, $sort_style);
-    }
+  $output[] = '';
+  $output[] = (!empty($label) ? $label . '  «  ' : '') . dump($data, $multilines_below, $sort_style);
+  $output[] = '';
+  $output[] = '';
+
+  if ($clear) {
+    clear_log();
   }
-  else {
+
+  error_log(implode(PHP_EOL, $output));
+}
+
+
+// -----------------------------------------------------------------------------
+
+
+/**
+ * A variant of `trace()` which traces multiple variables.
+ *
+ * @param mixed $data             - Defined in `dump()`.
+ * @param bool  $clear            - Clears the error log before tracing.
+ * @param bool  $multilines_below - Defined in `dump()`.
+ * @param mixed $sort_style       - Defined in `dump()`.
+ *
+ * @see trace()
+ * @uses dump()
+ *
+ * Example usage:
+ *   trace(array(
+ *     'variable2' => $var2,
+ *     'variable3' => $var3,
+ *   ));
+ *
+ */
+function traces($data, $clear = FALSE, $multilines_below = FALSE, $sort_style = SORT_ONE_LINER_VS_ARRAY) {
+  if (!is_array($data)) {
+    error_log('traces() only works with multiple data');
+    return;
+  }
+
+  $output   = array();
+  $output[] = str_repeat(':', 80);
+
+  // Show the function that's doing the trace.
+  $backtrace = debug_backtrace();
+  if (isset($backtrace[1]['function'])) {
+    $function_name = $backtrace[1]['function'] . '()';
+    $output[]      = $function_name . '  ' . str_repeat(':', 105 - strlen($function_name));
+  }
+
+  foreach ($data as $key => $value) {
     $output[] = '';
-    $output[] = ($label ? $label . '  «  ' : '') . dump($variable, $multilines_below, $sort_style);
+    $output[] = ($key && is_string($key) ? $key . '  «  ' : '') . dump($value, $multilines_below, $sort_style);
   }
 
   $output[] = '';
   $output[] = '';
+
+  if ($clear) {
+    clear_log();
+  }
 
   error_log(implode(PHP_EOL, $output));
 }
