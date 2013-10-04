@@ -365,7 +365,9 @@ function trace($data, $label = '', $clear = FALSE, $multilines_below = FALSE, $s
 /**
  * A variant of `trace()` which traces multiple variables.
  *
- * @param mixed $data             - Defined in `dump()`.
+ * @param mixed $data             - An associative array of data to be traced.
+ *                                  The keys of which are the labels and the
+ *                                  values are the data.
  * @param bool  $clear            - Clears the error log before tracing.
  * @param bool  $multilines_below - Defined in `dump()`.
  * @param mixed $sort_style       - Defined in `dump()`.
