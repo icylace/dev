@@ -1,0 +1,179 @@
+
+// ==================
+// DEVELOPMENT STYLES
+// ==================
+
+
+dev__using_test_font                     ?= false
+dev__highlighting_missing_key_properties ?= false
+dev__highlighting_structure              ?= false
+dev__diagnosing                          ?= false
+dev__highlighting_divs                   ?= false
+
+
+// -----------------------------------------------------------------------------
+//  Highlighting Missing Key Properties
+// -----------------------------------------------------------------------------
+
+
+if dev__using_test_font
+  //
+  // BLOKK
+  // http://blokkfont.com/
+  //
+
+  @font-face
+    font-family 'BLOKKNeue-Regular'
+    src         url('vendor/fonts/BLOKKNeue-Regular/webfonts/BLOKKNeue-Regular.eot')
+    src         url('vendor/fonts/BLOKKNeue-Regular/webfonts/BLOKKNeue-Regular.eot?#iefix')      format('embedded-opentype'),
+                url('vendor/fonts/BLOKKNeue-Regular/webfonts/BLOKKNeue-Regular.woff')            format('woff'),
+                url('vendor/fonts/BLOKKNeue-Regular/webfonts/BLOKKNeue-Regular.ttf')             format('truetype'),
+                url('vendor/fonts/BLOKKNeue-Regular/webfonts/BLOKKNeue-Regular.svg#svgFontName') format('svg')
+    font-weight normal
+    font-style  normal
+
+  @font-face
+    font-family 'BLOKKRegular'
+    src         url('vendor/fonts/BLOKKRegular/webfonts/BLOKKRegular.eot')
+    src         url('vendor/fonts/BLOKKRegular/webfonts/BLOKKRegular.eot?#iefix')      format('embedded-opentype'),
+                url('vendor/fonts/BLOKKRegular/webfonts/BLOKKRegular.woff')            format('woff'),
+                url('vendor/fonts/BLOKKRegular/webfonts/BLOKKRegular.ttf')             format('truetype'),
+                url('vendor/fonts/BLOKKRegular/webfonts/BLOKKRegular.svg#svgFontName') format('svg')
+    font-weight normal
+    font-style  normal
+
+
+// -----------------------------------------------------------------------------
+//  Highlighting Missing Key Properties
+// -----------------------------------------------------------------------------
+
+
+if dev__highlighting_missing_key_properties
+  html
+    // Highlight missing properties from elements.  We do this to make sure
+    // certain important properties are handled.
+    background-color #AA0000
+    color            #FF0000
+
+
+// -----------------------------------------------------------------------------
+//  Highlighting Page Structure
+// -----------------------------------------------------------------------------
+
+
+if dev__highlighting_structure
+  .dev
+    outline 1px solid #008000
+
+  body.dev--outline
+    .page-wrapper         { outline: 1px dotted #888888 }
+    .page                 { outline: 1px dotted #808080 }
+    .page-header          { outline: 1px dashed #800080 }
+    .branding             { outline: 1px dashed #800080 }
+    .logo                 { outline: 1px solid  #800080 }
+    .search               { outline: 1px solid  #FFFF00 }
+    .nav-primary          { outline: 1px solid  #008000 }
+    .main-content-wrapper { outline: 1px solid  #00FFFF }
+    .main-content         { outline: 1px solid  #00FFFF }
+    .sidebar-first        { outline: 1px solid  #00FFFF }
+    .sidebar-second       { outline: 1px solid  #00FFFF }
+    .page-footer          { outline: 1px solid  #0000FF }
+    .site-info            { outline: 1px solid  #0000FF }
+    .copyright            { outline: 1px solid  #0000FF }
+    .credit               { outline: 1px solid  #0000FF }
+
+  body.dev--fill
+    .page-wrapper         { background-color: #888888 }
+    .page                 { background-color: #808080 }
+    .page-header          { background-color: #800080 }
+    .branding             { background-color: #800080 }
+    .logo                 { background-color: #800080 }
+    .search               { background-color: #FFFF00 }
+    .nav-primary          { background-color: #008000 }
+    .main-content-wrapper { background-color: #00FFFF }
+    .main-content         { background-color: #00FFFF }
+    .sidebar-first        { background-color: #00FFFF }
+    .sidebar-second       { background-color: #00FFFF }
+    .page-footer          { background-color: #0000FF }
+    .site-info            { background-color: #0000FF }
+    .copyright            { background-color: #0000FF }
+    .credit               { background-color: #0000FF }
+
+
+// -----------------------------------------------------------------------------
+//  Diagnostic Styles
+//
+//  Based on:
+//  http://meyerweb.com/eric/thoughts/2007/09/07/diagnostic-styling/
+//  http://meyerweb.com/eric/thoughts/2007/09/07/diagnostic-styling/#comment-231223
+//  http://accessites.org/site/2006/07/big-red-angry-text/
+//  http://css-tricks.com/snippets/css/css-diagnostics/
+// -----------------------------------------------------------------------------
+
+
+if dev__diagnosing
+  *[align],       *[border],      *[height],     *[onblur],
+  *[onchange],    *[onclick],     *[ondblclick], *[onfocus],
+  *[onkeydown],   *[onkeypress],  *[onkeyup],    *[onload],
+  *[onmousedown], *[onmousemove], *[onmouseout], *[onmouseover],
+  *[onmouseup],   *[onreset],     *[onselect],   *[onsubmit], *[onunload],
+  *[style],       *[valign],      *[width],
+  a[href^="javascript:"], table[cellspacing], table[cellpadding], center, font
+    outline 5px solid #FF0000
+
+  *[class=""], *[id=""]
+    outline 5px dotted #FF0000
+
+  p, div, span, li, td, th
+    &:empty
+      background-color #FFFF00
+      padding          0.5em
+
+  p[align], div[align], table[align], center, font, font[color]
+    background  #EECC11 url('images/warning.gif') repeat 0 0
+    border      2px dashed #CD0000
+    color       #CD0000
+    font-size   2em
+    font-weight 700
+    margin      10px
+    padding     10px
+
+  a
+    &[href]:not([title]) { border:           5px solid #FF0000  }
+    &[href=""]           { background-color: #FF00FF            }
+    &[href="#"]          { background-color: #00FF00            }
+    &[title=""]          { outline:          3px dotted #FF0000 }
+
+  img
+    &[height], &[width] { outline: 0                  }
+    &:not([alt])        { border:  5px solid #FF0000  }
+    &:not([title])      { outline: 5px solid #FF00FF  }
+    &[alt=""]           { border:  3px dotted #FF0000 }
+    &[title=""]         { outline: 3px dotted #FF00FF }
+
+  table
+    &[summary=""]    { outline: 3px dotted #FF0000 }
+    &:not([summary]) { outline: 5px solid #FF0000  }
+
+  th
+    border 2px solid #FF0000
+    &[scope="col"], &[scope="row"]
+      border none
+
+
+// -----------------------------------------------------------------------------
+//  Highlighting <div> Elements
+//
+//  Based on:
+//  http://meyerweb.com/eric/thoughts/2007/09/07/diagnostic-styling/#comment-230865
+// -----------------------------------------------------------------------------
+
+
+if dev__highlighting_divs
+  div                         { border:       2px solid #FF0000 }
+  div div                     { border-color: #FFA500           }
+  div div div                 { border-color: #FFFF00           }
+  div div div div             { border-color: #008000           }
+  div div div div div         { border-color: #00FFFF           }
+  div div div div div div     { border-color: #000080           }
+  div div div div div div div { border-color: #800080           }
