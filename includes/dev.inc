@@ -84,23 +84,15 @@ function clear_log() {
  *
  */
 function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_level = 0) {
-  $dumping_object = FALSE;
-  $output         = array();
-
-  if (is_object($data)) {
-    //
-    // Convert the object into an array first for streamlined processing.
-    // https://bugs.php.net/bug.php?id=48016&edit=1
-    // http://stackoverflow.com/questions/2476876/convert-object-to-array/2476954#2476954
-    //
-    $data = json_decode(json_encode($data), TRUE);
-
-    $dumping_object = TRUE;
-  }
+  $output    = array();
+  $an_object = is_object($data);
 
   // Pretty-print arrays and objects in a pseudo-JSON style.
-  if (is_array($data)) {
-    if (!empty($data)) {
+  if (is_array($data) || $an_object) {
+    if (empty($data)) {
+      $output[] = ($an_object ? '{}' : '[]');
+    }
+    else {
       if ($sort_style === SORT_ONE_LINER_VS_ARRAY) {
         /**
          *  Sort the entries based on this ordering:
@@ -108,50 +100,42 @@ function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_leve
          *  1.  Separate into string indexes group and numerical indexes group
          *      with the numerical indexes group in the ascended position.
          *
-         *  2.  Within each group separate into non-empty container subgroup and
-         *      "one-liner" subgroup.
+         *  2.  Within each group separate into non-empty/filled collection
+         *      subgroup and "one-liner" subgroup.
          *
          *  3.  Within each subgroup alphabetize in ascending order.
          */
 
-        $labelled_one_liners           = array();
-        $labelled_non_empty_containers = array();
-        $numbered_one_liners           = array();
-        $numbered_non_empty_containers = array();
+        $entries = array(
+          'numbered' => array(
+            'one_liners'         => array(),
+            'filled_collections' => array(),
+          ),
+          'labelled' => array(
+            'one_liners'         => array(),
+            'filled_collections' => array(),
+          ),
+        );
 
+        // Do steps 1 and 2.
         foreach ($data as $key => $value) {
-          // Do step 1.
-          if (is_int($key)) {
-            // Do step 2.
-            if ((is_object($value) || is_array($value)) && !empty($value)) {
-              $numbered_non_empty_containers[$key] = $value;
-            }
-            else {
-              $labelled_one_liners[$key] = $value;
-            }
-          }
-          else {
-            // Do step 2.
-            if ((is_object($value) || is_array($value)) && !empty($value)) {
-              $labelled_non_empty_containers[$key] = $value;
-            }
-            else {
-              $labelled_one_liners[$key] = $value;
-            }
-          }
+          $a_filled_collection = (is_object($value) || is_array($value)) && !empty($value);
+          $key_kind   = (is_int($key)         ? 'numbered'           : 'labelled');
+          $value_kind = ($a_filled_collection ? 'filled_collections' : 'one_liners');
+          $entries[$key_kind][$value_kind][$key] = $value;
         }
 
         // Do step 3.
-        ksort($labelled_one_liners);
-        ksort($labelled_non_empty_containers);
-        ksort($numbered_one_liners);
-        ksort($numbered_non_empty_containers);
+        ksort($entries['labelled']['one_liners']);
+        ksort($entries['labelled']['filled_collections']);
+        ksort($entries['numbered']['one_liners']);
+        ksort($entries['numbered']['filled_collections']);
 
         // Apply the new ordering.
-        $data = $labelled_one_liners
-              + $labelled_non_empty_containers
-              + $numbered_one_liners
-              + $numbered_non_empty_containers;
+        $data = $entries['labelled']['one_liners']
+              + $entries['labelled']['filled_collections']
+              + $entries['numbered']['one_liners']
+              + $entries['numbered']['filled_collections'];
       }
       elseif ($sort_style) {
         ksort($data, $sort_style);
@@ -161,23 +145,25 @@ function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_leve
 
       // Find the longest appropriate key.
       foreach ($data as $key => $value) {
+        $a_filled_collection = (is_object($value) || is_array($value)) && !empty($value);
         $key_length = strlen($key);
         // It counts if it's longer and doesn't have a non-empty container value.
-        if ($key_length > $longest_length && ((!is_object($value) && !is_array($value)) || empty($value))) {
+        if ($key_length > $longest_length && !$a_filled_collection) {
           $longest_length = $key_length;
         }
       }
 
       $indent_spacing = str_repeat('  ', $indent_level);
 
-      $output[] = ($dumping_object ? '{' : '[');
+      $output[] = ($an_object ? '{' : '[');
 
       foreach ($data as $key => $value) {
+        $a_filled_collection = (is_object($value) || is_array($value)) && !empty($value);
         $dumped_value = dump($value, $multilines_below, $sort_style, $indent_level + 1);
         $separator    = ' ';
         $separator_2  = '';
-        // Align values if they're not non-empty arrays.
-        if ((!is_object($value) && !is_array($value)) || empty($value)) {
+        // Align values if they're not non-empty arrays or non-empty objects.
+        if (!$a_filled_collection) {
           $separator = str_repeat(' ', $longest_length - strlen($key) + 2) . '‹';
           // See if we're working with a multiline string.
           if (strpos($dumped_value, PHP_EOL) !== FALSE) {
@@ -189,12 +175,11 @@ function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_leve
               $lines          = explode(PHP_EOL, $dumped_value);
               $indented_lines = array();
               for ($i = 0, $l = count($lines); $i < $l; $i++) {
+                $spacing = '';
                 if ($i > 0 && !empty($lines[$i]) && $lines[$i] !== "\r") {
-                  $indented_lines[] = $indent_spacing . str_repeat(' ', $longest_length + 9) . $lines[$i];
+                  $spacing = $indent_spacing . str_repeat(' ', $longest_length + 9);
                 }
-                else {
-                  $indented_lines[] = $lines[$i];
-                }
+                $indented_lines[] = $spacing . $lines[$i];
               }
               $dumped_value = implode(PHP_EOL, $indented_lines);
             }
@@ -207,10 +192,7 @@ function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_leve
         $output[] = $indent_spacing . '  ' . dump($key) . $separator . $separator_2 . $dumped_value;
       }
 
-      $output[] = $indent_spacing . ($dumping_object ? '}' : ']');
-    }
-    else {
-      $output[] = ($dumping_object ? '{}' : '[]');
+      $output[] = $indent_spacing . ($an_object ? '}' : ']');
     }
   }
   else if ($data === NULL) {
