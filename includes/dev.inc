@@ -162,7 +162,6 @@ function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_leve
       // Find the longest appropriate key.
       foreach ($data as $key => $value) {
         $key_length = strlen($key);
-
         // It counts if it's longer and doesn't have a non-empty container value.
         if ($key_length > $longest_length && ((!is_object($value) && !is_array($value)) || empty($value))) {
           $longest_length = $key_length;
@@ -177,10 +176,10 @@ function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_leve
         $dumped_value = dump($value, $multilines_below, $sort_style, $indent_level + 1);
         $separator    = ' ';
         $separator_2  = '';
-
         // Align values if they're not non-empty arrays.
         if ((!is_object($value) && !is_array($value)) || empty($value)) {
           $separator = str_repeat(' ', $longest_length - strlen($key) + 2) . '‹';
+          // See if we're working with a multiline string.
           if (strpos($dumped_value, PHP_EOL) !== FALSE) {
             if ($multilines_below) {
               $separator_2 = PHP_EOL;
@@ -189,8 +188,8 @@ function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_leve
               $separator_2    = '  ';
               $lines          = explode(PHP_EOL, $dumped_value);
               $indented_lines = array();
-              for ($i = 0; $i < count($lines); $i++) {
-                if ($i > 0 && !empty($lines[$i])) {
+              for ($i = 0, $l = count($lines); $i < $l; $i++) {
+                if ($i > 0 && !empty($lines[$i]) && $lines[$i] !== "\r") {
                   $indented_lines[] = $indent_spacing . str_repeat(' ', $longest_length + 9) . $lines[$i];
                 }
                 else {
@@ -336,6 +335,10 @@ function step() {
  *
  */
 function trace($data, $label = '', $clear = FALSE, $multilines_below = FALSE, $sort_style = SORT_ONE_LINER_VS_ARRAY) {
+  if ($clear) {
+    clear_log();
+  }
+
   $output   = array();
   $output[] = str_repeat(':', 80);
 
@@ -346,14 +349,26 @@ function trace($data, $label = '', $clear = FALSE, $multilines_below = FALSE, $s
     $output[]      = $function_name . '  ' . str_repeat(':', 105 - strlen($function_name));
   }
 
+  // $dumped_value = dump($data, $multilines_below, $sort_style);
+
+  // if (strpos($dumped_value, PHP_EOL) !== FALSE) {
+  //   $lines          = explode(PHP_EOL, $dumped_value);
+  //   $indented_lines = array();
+  //   for ($i = 0, $l = count($lines); $i < $l; $i++) {
+  //     if ($i > 0 && !empty($lines[$i])) {
+  //       $indented_lines[] = $indent_spacing . str_repeat(' ', $longest_length + 9) . $lines[$i];
+  //     }
+  //     else {
+  //       $indented_lines[] = $lines[$i];
+  //     }
+  //   }
+  //   $dumped_value = implode(PHP_EOL, $indented_lines);
+  // }
+
   $output[] = '';
   $output[] = (!empty($label) ? $label . '  «  ' : '') . dump($data, $multilines_below, $sort_style);
   $output[] = '';
   $output[] = '';
-
-  if ($clear) {
-    clear_log();
-  }
 
   error_log(implode(PHP_EOL, $output));
 }
@@ -388,6 +403,10 @@ function traces($data, $clear = FALSE, $multilines_below = FALSE, $sort_style = 
     return;
   }
 
+  if ($clear) {
+    clear_log();
+  }
+
   $output   = array();
   $output[] = str_repeat(':', 80);
 
@@ -400,15 +419,11 @@ function traces($data, $clear = FALSE, $multilines_below = FALSE, $sort_style = 
 
   foreach ($data as $key => $value) {
     $output[] = '';
-    $output[] = ($key && is_string($key) ? $key . '  «  ' : '') . dump($value, $multilines_below, $sort_style);
+    $output[] = '' . ($key && is_string($key) ? $key . '  «  ' : '') . dump($value, $multilines_below, $sort_style);
   }
 
   $output[] = '';
   $output[] = '';
-
-  if ($clear) {
-    clear_log();
-  }
 
   error_log(implode(PHP_EOL, $output));
 }
