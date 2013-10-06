@@ -66,9 +66,8 @@ function clear_log() {
  * http://php.net/manual/en/function.var-export.php#54440
  *
  * @param mixed $data             - The data to render.
- * @param bool  $multilines_below - Make those parts of the data that will
- *                                  be formatted on multiple lines to be
- *                                  sorted at the end.
+ * @param bool  $multilines_below - Multilined data will be displayed below
+ *                                  the variable that holds it.
  * @param mixed $sort_style       - The type of sorting to employ.
  *                                  Set to NULL if sorting is not desired.
  *                                  Standard sort flags are defined here:
@@ -84,13 +83,55 @@ function clear_log() {
  *
  */
 function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_level = 0) {
-  $output    = array();
-  $an_object = is_object($data);
+  $themes = array(
+    'standard' => array(
+      'array_empty'          => '[]',
+      'array_open'           => '[',
+      'array_closing'        => ']',
+      'object_empty'         => '{}',
+      'object_open'          => '{',
+      'object_closing'       => '}',
+      'assignment'           => '‹',
+      'indent_unit'          => '  ',
+      'separator_unit'       => ' ',
+      'separator_2_unit'     => '  ',
+      'separator_2_newline'  => PHP_EOL,
+      'collection_separator' => ' ',
+    ),
+    'minimal' => array(
+      'array_empty'          => '[]',
+      'array_open'           => '',
+      'array_closing'        => '',
+      'object_empty'         => '{}',
+      'object_open'          => ':',
+      'object_closing'       => '',
+      'assignment'           => '‹',
+      'indent_unit'          => '  ',
+      'separator_unit'       => ' ',
+      'separator_2_unit'     => '  ',
+      'separator_2_newline'  => PHP_EOL,
+      'collection_separator' => '',
+    ),
+  );
+
+  $output               = array();
+  $an_object            = is_object($data);
+  // $theme                = $themes['standard'];
+  $theme                = $themes['minimal'];
+  $collection_type      = ($an_object ? 'object' : 'array');
+  $collection_empty     = $theme[$collection_type . '_empty'];
+  $collection_open      = $theme[$collection_type . '_open'];
+  $collection_closing   = $theme[$collection_type . '_closing'];
+  $assignment           = $theme['assignment'];
+  $indent_unit          = $theme['indent_unit'];
+  $separator_unit       = $theme['separator_unit'];
+  $separator_2_unit     = $theme['separator_2_unit'];
+  $collection_separator = $theme['collection_separator'];
 
   // Pretty-print arrays and objects in a pseudo-JSON style.
   if (is_array($data) || $an_object) {
     if (empty($data)) {
-      $output[] = ($an_object ? '{}' : '[]');
+      $output[] = $collection_empty;
     }
     else {
       if ($sort_style === SORT_ONE_LINER_VS_ARRAY) {
@@ -153,31 +194,31 @@ function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_leve
         }
       }
 
-      $indent_spacing = str_repeat('  ', $indent_level);
+      $indent_spacing = str_repeat($indent_unit, $indent_level);
 
-      $output[] = ($an_object ? '{' : '[');
+      $output[] = $collection_open;
 
       foreach ($data as $key => $value) {
         $a_filled_collection = (is_object($value) || is_array($value)) && !empty($value);
         $dumped_value = dump($value, $multilines_below, $sort_style, $indent_level + 1);
-        $separator    = ' ';
+        $separator    = $collection_separator;
         $separator_2  = '';
         // Align values if they're not non-empty arrays or non-empty objects.
         if (!$a_filled_collection) {
-          $separator = str_repeat(' ', $longest_length - strlen($key) + 2) . '‹';
+          $separator = str_repeat($separator_unit, $longest_length - strlen($key) + 2) . $assignment;
           // See if we're working with a multiline string.
           if (strpos($dumped_value, PHP_EOL) !== FALSE) {
             if ($multilines_below) {
-              $separator_2 = PHP_EOL;
+              $separator_2 = $separator_2_newline;
             }
             else {
-              $separator_2    = '  ';
+              $separator_2    = $separator_2_unit;
               $lines          = explode(PHP_EOL, $dumped_value);
               $indented_lines = array();
               for ($i = 0, $l = count($lines); $i < $l; $i++) {
                 $spacing = '';
                 if ($i > 0 && !empty($lines[$i]) && $lines[$i] !== "\r") {
-                  $spacing = $indent_spacing . str_repeat(' ', $longest_length + 9);
+                  $spacing = $indent_spacing . str_repeat($separator_unit, $longest_length + 9);
                 }
                 $indented_lines[] = $spacing . $lines[$i];
               }
@@ -185,14 +226,16 @@ function dump($data, $multilines_below = FALSE, $sort_style = NULL, $indent_leve
             }
           }
           else {
-            $separator_2 = '  ';
+            $separator_2 = $separator_2_unit;
           }
         }
 
-        $output[] = $indent_spacing . '  ' . dump($key) . $separator . $separator_2 . $dumped_value;
+        $output[] = $indent_spacing . $indent_unit . dump($key) . $separator . $separator_2 . $dumped_value;
       }
 
-      $output[] = $indent_spacing . ($an_object ? '}' : ']');
+      if (!empty($collection_closing)) {
+        $output[] = $indent_spacing . $collection_closing;
+      }
     }
   }
   else if ($data === NULL) {
@@ -331,22 +374,6 @@ function trace($data, $label = '', $clear = FALSE, $multilines_below = FALSE, $s
     $output[]      = $function_name . '  ' . str_repeat(':', 105 - strlen($function_name));
   }
 
-  // $dumped_value = dump($data, $multilines_below, $sort_style);
-
-  // if (strpos($dumped_value, PHP_EOL) !== FALSE) {
-  //   $lines          = explode(PHP_EOL, $dumped_value);
-  //   $indented_lines = array();
-  //   for ($i = 0, $l = count($lines); $i < $l; $i++) {
-  //     if ($i > 0 && !empty($lines[$i])) {
-  //       $indented_lines[] = $indent_spacing . str_repeat(' ', $longest_length + 9) . $lines[$i];
-  //     }
-  //     else {
-  //       $indented_lines[] = $lines[$i];
-  //     }
-  //   }
-  //   $dumped_value = implode(PHP_EOL, $indented_lines);
-  // }
-
   $output[] = '';
   $output[] = (!empty($label) ? $label . '  «  ' : '') . dump($data, $multilines_below, $sort_style);
   $output[] = '';
@@ -381,7 +408,7 @@ function trace($data, $label = '', $clear = FALSE, $multilines_below = FALSE, $s
  */
 function traces($data, $clear = FALSE, $multilines_below = FALSE, $sort_style = SORT_ONE_LINER_VS_ARRAY) {
   if (!is_array($data)) {
-    error_log('traces() only works with multiple data');
+    error_log('traces() only works with an array of data to trace');
     return;
   }
 
