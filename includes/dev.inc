@@ -18,6 +18,8 @@ define('DEV_LOG',                 '/Users/icylace/others/MAMP PRO Logs/php_error
 define('DEV_AUTO_CLEAR_ENABLED',  'auto clear enabled');
 
 // Used by `dump()`.
+define('ALIGN_LEFT',                0);
+define('ALIGN_RIGHT',               1);
 define('MULTILINES_REGULAR',        0);
 define('MULTILINES_BELOW',          1);
 define('MULTILINES_INDENTED_BELOW', 2);
@@ -145,19 +147,22 @@ function dump($data, $options = array(), $indent_level = 0) {
       'object_close'          => '',
       'showing_array_indexes' => TRUE,
       'assignment'            => '  ‹',
+      'assignment_align'      => ALIGN_RIGHT,
       'indent_unit'           => '  ',
       'separator_unit'        => ' ',
       'multiline_separator'   => PHP_EOL,
-      'key_separator_unit'    => ' ',
+      'key_separator'         => ' ',
       'value_separator'       => '  ',
       'collection_separator'  => '',
+      'item_separator'        => '',
+      'last_item_separator'   => '',
       'string_key_open'       => '',
       'string_key_close'      => '',
       'string_open'           => '\'',
       'string_close'          => '\'',
       'null'                  => 'null',
     ),
-    'pseudo-json' => array(
+    'json' => array(
       'array_empty'           => '[]',
       'array_open'            => '[',
       'array_close'           => ']',
@@ -166,12 +171,15 @@ function dump($data, $options = array(), $indent_level = 0) {
       'object_close'          => '}',
       'showing_array_indexes' => FALSE,
       'assignment'            => ':',
+      'assignment_align'      => ALIGN_LEFT,
       'indent_unit'           => '  ',
       'separator_unit'        => ' ',
       'multiline_separator'   => PHP_EOL,
-      'key_separator_unit'    => '',
+      'key_separator'         => '',
       'value_separator'       => ' ',
       'collection_separator'  => ': ',
+      'item_separator'        => ',',
+      'last_item_separator'   => '',
       'string_key_open'       => '"',
       'string_key_close'      => '"',
       'string_open'           => '"',
@@ -198,20 +206,23 @@ function dump($data, $options = array(), $indent_level = 0) {
   $output    = array();
   $an_object = is_object($data);
 
-  // Setup the render theme for use.  Default to a pseudo-JSON format.
-  $default               = $themes['pseudo-json'];
+  // Setup the render theme for use.  Default to a prettified JSON format.
+  $default               = $themes['json'];
   $collection_type       = ($an_object ? 'object' : 'array');
   $collection_empty      = (isset($theme[$collection_type . '_empty']) ? $theme[$collection_type . '_empty'] : $default[$collection_type . '_empty']);
   $collection_open       = (isset($theme[$collection_type . '_open'])  ? $theme[$collection_type . '_open']  : $default[$collection_type . '_open']);
   $collection_close      = (isset($theme[$collection_type . '_close']) ? $theme[$collection_type . '_close'] : $default[$collection_type . '_close']);
   $showing_array_indexes = (isset($theme['showing_array_indexes'])     ? $theme['showing_array_indexes']     : $default['showing_array_indexes']);
   $assignment            = (isset($theme['assignment'])                ? $theme['assignment']                : $default['assignment']);
+  $assignment_align      = (isset($theme['assignment_align'])          ? $theme['assignment_align']          : $default['assignment_align']);
   $indent_unit           = (isset($theme['indent_unit'])               ? $theme['indent_unit']               : $default['indent_unit']);
   $separator_unit        = (isset($theme['separator_unit'])            ? $theme['separator_unit']            : $default['separator_unit']);
   $multiline_separator   = (isset($theme['multiline_separator'])       ? $theme['multiline_separator']       : $default['multiline_separator']);
-  $key_separator_unit    = (isset($theme['key_separator_unit'])        ? $theme['key_separator_unit']        : $default['key_separator_unit']);
+  $key_separator         = (isset($theme['key_separator'])             ? $theme['key_separator']             : $default['key_separator']);
   $value_separator       = (isset($theme['value_separator'])           ? $theme['value_separator']           : $default['value_separator']);
   $collection_separator  = (isset($theme['collection_separator'])      ? $theme['collection_separator']      : $default['collection_separator']);
+  $item_separator        = (isset($theme['item_separator'])            ? $theme['item_separator']            : $default['item_separator']);
+  $last_item_separator   = (isset($theme['last_item_separator'])       ? $theme['last_item_separator']       : $default['last_item_separator']);
   $string_key_open       = (isset($theme['string_key_open'])           ? $theme['string_key_open']           : $default['string_key_open']);
   $string_key_close      = (isset($theme['string_key_close'])          ? $theme['string_key_close']          : $default['string_key_close']);
   $string_open           = (isset($theme['string_open'])               ? $theme['string_open']               : $default['string_open']);
@@ -283,19 +294,34 @@ function dump($data, $options = array(), $indent_level = 0) {
         }
       }
 
+      $output[]          = $collection_open;
       $indent_spacing    = str_repeat($indent_unit, $indent_level);
       $collection_indent = $indent_spacing . $indent_unit;
-      $output[]          = $collection_open;
+
+      end($data);
+      $last_item_key = key($data);
 
       foreach ($data as $key => $value) {
         $a_filled_collection = (is_object($value) || is_array($value)) && !empty($value);
-        $separator    = $collection_separator;
-        $key_label    = $string_key_open . $key . $string_key_close;
-        $dumped_value = dump($value, $options, $indent_level + 1);
+        $cur_item_separator  = ($key === $last_item_key ? $last_item_separator : $item_separator);
+        $separator           = $collection_separator;
+        $key_label           = $string_key_open . $key . $string_key_close;
+        $dumped_value        = dump($value, $options, $indent_level + 1);
 
         // Align values if they're not non-empty arrays or non-empty objects.
         if (!$a_filled_collection) {
-          $separator = str_repeat($key_separator_unit, $longest_length) . $assignment;
+          // Align the assignment symbol.
+          $separation_gap = $longest_length - strlen($key);
+          if ($assignment_align === ALIGN_LEFT) {
+            $key_separation_gap   = 0;
+            $value_separation_gap = $separation_gap;
+          }
+          else {
+            $key_separation_gap   = $separation_gap;
+            $value_separation_gap = 0;
+          }
+          $separator = str_repeat($key_separator, $key_separation_gap) . $assignment . str_repeat($value_separator, $value_separation_gap);
+
           // See if we're working with a multiline string.
           if (strpos($dumped_value, PHP_EOL) !== FALSE) {
             if ($multilines_style === MULTILINES_BELOW) {
@@ -330,10 +356,10 @@ function dump($data, $options = array(), $indent_level = 0) {
         }
 
         if ($showing_array_indexes || !is_array($data) || !is_numeric($key)) {
-          $output[] = $collection_indent . $key_label . $separator . $dumped_value;
+          $output[] = $collection_indent . $key_label . $separator . $dumped_value . $cur_item_separator;
         }
         else {
-          $output[] = $collection_indent . $dumped_value;
+          $output[] = $collection_indent . $dumped_value . $cur_item_separator;
         }
       }
 
