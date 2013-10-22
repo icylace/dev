@@ -7,7 +7,7 @@
  * These are some functions that aid in the development process.
  *
  * @copyright Copyright (c) 2013 Ron Martinez
- *            Except for `read_last_line()` which is the copyright of its owner.
+ *            Except for `readLastLine()` which is the copyright of its owner.
  * @license   http://opensource.org/licenses/MIT   MIT License
  * @version   0.2.0
  * @link      https://github.com/icylace/dev
@@ -26,17 +26,17 @@ define('MULTILINES_INDENTED_BELOW', 2);
 define('SORT_ONE_LINER_VS_ARRAY',   'one liner vs array');
 
 
-// auto_clear_log();
+// autoClearLog();
 
 
 // -----------------------------------------------------------------------------
 
 
-function auto_clear_log() {
+function autoClearLog() {
   /**
    * http://stackoverflow.com/questions/1510141/read-last-line-from-file/1510248#1510248
    */
-  function read_last_line($filename) {
+  function readLastLine($filename) {
     $line   = '';
     $f      = fopen($filename, 'r');
     $cursor = -1;
@@ -61,10 +61,10 @@ function auto_clear_log() {
     return $line;
   }
 
-  $line = read_last_line(DEV_LOG);
+  $line = readLastLine(DEV_LOG);
 
   if (strpos($line, DEV_AUTO_CLEAR_ENABLED) > 0) {
-    clear_log();
+    clearLog();
   }
   else {
     error_log(var_export(DEV_AUTO_CLEAR_ENABLED, TRUE));
@@ -90,17 +90,27 @@ function backtrace() {
 
 
 // -----------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
 
 
 /**
  * Clears the error log.
  */
-function clear_log() {
+function clearLog() {
   file_put_contents(DEV_LOG, NULL);
 }
 
 
+// -----------------------------------------------------------------------------
+
+
+// Based on:
+// http://stackoverflow.com/a/4254008/1935675
+function isAssoc($array) {
+  return is_array($array) && (bool)count(array_filter(array_keys($array), 'is_string'));
+}
+
+
+// -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
 
 
@@ -131,44 +141,27 @@ function clear_log() {
  *
  * @return string - The formatted data.
  *
- * @used-by parse_backtrace()
+ * @used-by parseBacktrace()
  * @used-by trace()
  * @used-by traces()
  *
  */
 function dump($data, $options = array(), $indent_level = 0) {
   $themes = array(
-    'minimal' => array(
-      'array_empty'           => '[]',
-      'array_open'            => '',
-      'array_close'           => '',
-      'object_empty'          => '{}',
-      'object_open'           => ':',
-      'object_close'          => '',
-      'showing_array_indexes' => TRUE,
-      'assignment'            => '  ‹',
-      'assignment_align'      => ALIGN_RIGHT,
-      'indent_unit'           => '  ',
-      'separator_unit'        => ' ',
-      'multiline_separator'   => PHP_EOL,
-      'key_separator'         => ' ',
-      'value_separator'       => '  ',
-      'collection_separator'  => '',
-      'item_separator'        => '',
-      'last_item_separator'   => '',
-      'string_key_open'       => '',
-      'string_key_close'      => '',
-      'string_open'           => '\'',
-      'string_close'          => '\'',
-      'null'                  => 'null',
-    ),
     'json' => array(
       'array_empty'           => '[]',
       'array_open'            => '[',
       'array_close'           => ']',
+      'assoc_array_empty'     => '{}',
+      'assoc_array_open'      => '{',
+      'assoc_array_close'     => '}',
       'object_empty'          => '{}',
       'object_open'           => '{',
       'object_close'          => '}',
+      'string_key_open'       => '"',
+      'string_key_close'      => '"',
+      'string_open'           => '"',
+      'string_close'          => '"',
       'showing_array_indexes' => FALSE,
       'assignment'            => ':',
       'assignment_align'      => ALIGN_LEFT,
@@ -180,57 +173,74 @@ function dump($data, $options = array(), $indent_level = 0) {
       'collection_separator'  => ': ',
       'item_separator'        => ',',
       'last_item_separator'   => '',
-      'string_key_open'       => '"',
-      'string_key_close'      => '"',
-      'string_open'           => '"',
-      'string_close'          => '"',
+      'null'                  => 'null',
+    ),
+    'minimal' => array(
+      'array_empty'           => '[]',
+      'array_open'            => '',
+      'array_close'           => '',
+      'assoc_array_empty'     => '[]',
+      'assoc_array_open'      => '',
+      'assoc_array_close'     => '',
+      'object_empty'          => '{}',
+      'object_open'           => ':',
+      'object_close'          => '',
+      'string_key_open'       => '',
+      'string_key_close'      => '',
+      'string_open'           => '\'',
+      'string_close'          => '\'',
+      'showing_array_indexes' => TRUE,
+      'assignment'            => '  ‹',
+      'assignment_align'      => ALIGN_RIGHT,
+      'indent_unit'           => '  ',
+      'separator_unit'        => ' ',
+      'multiline_separator'   => PHP_EOL,
+      'key_separator'         => ' ',
+      'value_separator'       => '  ',
+      'collection_separator'  => '',
+      'item_separator'        => '',
+      'last_item_separator'   => '',
       'null'                  => 'null',
     ),
   );
 
   $multilines_style = (isset($options['multilines_style']) ? $options['multilines_style'] : MULTILINES_REGULAR);
-  $sort_style       = (isset($options['sort_style'])       ? $options['sort_style']       : NULL);
+  $sort_style       = (isset($options['sort_style'      ]) ? $options['sort_style'      ] : NULL);
+  $theme            = (isset($options['theme'           ]) ? $options['theme'           ] : NULL);
 
-  // Use a custom theme if defined or use a preset theme.
-  $theme = $themes['minimal'];
-  if (isset($options['theme'])) {
-    $theme_option = $options['theme'];
-    if (is_array($theme_option)) {
-      $theme = $theme_option;
-    }
-    else if (is_string($theme_option)) {
-      $theme = $themes[$theme_option];
-    }
+  if (!is_array($theme)) {
+    $theme = (is_string($theme) ? $themes[$theme] : $themes['minimal']);
   }
 
-  $output    = array();
-  $an_object = is_object($data);
-
+  //
   // Setup the render theme for use.  Default to a prettified JSON format.
-  $default               = $themes['json'];
-  $collection_type       = ($an_object ? 'object' : 'array');
-  $collection_empty      = (isset($theme[$collection_type . '_empty']) ? $theme[$collection_type . '_empty'] : $default[$collection_type . '_empty']);
-  $collection_open       = (isset($theme[$collection_type . '_open'])  ? $theme[$collection_type . '_open']  : $default[$collection_type . '_open']);
-  $collection_close      = (isset($theme[$collection_type . '_close']) ? $theme[$collection_type . '_close'] : $default[$collection_type . '_close']);
-  $showing_array_indexes = (isset($theme['showing_array_indexes'])     ? $theme['showing_array_indexes']     : $default['showing_array_indexes']);
-  $assignment            = (isset($theme['assignment'])                ? $theme['assignment']                : $default['assignment']);
-  $assignment_align      = (isset($theme['assignment_align'])          ? $theme['assignment_align']          : $default['assignment_align']);
-  $indent_unit           = (isset($theme['indent_unit'])               ? $theme['indent_unit']               : $default['indent_unit']);
-  $separator_unit        = (isset($theme['separator_unit'])            ? $theme['separator_unit']            : $default['separator_unit']);
-  $multiline_separator   = (isset($theme['multiline_separator'])       ? $theme['multiline_separator']       : $default['multiline_separator']);
-  $key_separator         = (isset($theme['key_separator'])             ? $theme['key_separator']             : $default['key_separator']);
-  $value_separator       = (isset($theme['value_separator'])           ? $theme['value_separator']           : $default['value_separator']);
-  $collection_separator  = (isset($theme['collection_separator'])      ? $theme['collection_separator']      : $default['collection_separator']);
-  $item_separator        = (isset($theme['item_separator'])            ? $theme['item_separator']            : $default['item_separator']);
-  $last_item_separator   = (isset($theme['last_item_separator'])       ? $theme['last_item_separator']       : $default['last_item_separator']);
-  $string_key_open       = (isset($theme['string_key_open'])           ? $theme['string_key_open']           : $default['string_key_open']);
-  $string_key_close      = (isset($theme['string_key_close'])          ? $theme['string_key_close']          : $default['string_key_close']);
-  $string_open           = (isset($theme['string_open'])               ? $theme['string_open']               : $default['string_open']);
-  $string_close          = (isset($theme['string_close'])              ? $theme['string_close']              : $default['string_close']);
-  $null                  = (isset($theme['null'])                      ? $theme['null']                      : $default['null']);
+  //
+
+  $collection_type = '';
+  if (isAssoc($data)) {
+    $collection_type = 'assoc_array';
+  }
+  else if (is_array($data)) {
+    $collection_type = 'array';
+  }
+  else if (is_object($data)) {
+    $collection_type = 'object';
+  }
+
+  $default        = $themes['json'];
+  $theme_elements = array_keys($default);
+  foreach ($theme_elements as $x) {
+    $$x = (isset($theme[$x]) ? $theme[$x] : $default[$x]);
+  }
+
+  $output = array();
 
   // Pretty-print arrays and objects in a pseudo-JSON style.
-  if (is_array($data) || $an_object) {
+  if (!empty($collection_type)) {
+    $collection_empty = ${$collection_type . '_empty'};
+    $collection_open  = ${$collection_type . '_open' };
+    $collection_close = ${$collection_type . '_close'};
+
     if (empty($data)) {
       $output[] = $collection_empty;
     }
@@ -393,16 +403,16 @@ function dump($data, $options = array(), $indent_level = 0) {
  *
  * @param array $raw_trace  - The backtrace to parse.
  * @param bool  $args_shown - Renders arguments as well.
- * @param bool  $options    - Defined in `dump()`.
+ * @param array $options    - Defined in `dump()`.
  *
  * @return string - The formatted data.
  *
  * @uses dump()
  *
  * Example usage:
- *   trace(parse_backtrace(debug_backtrace()));
+ *   trace(parseBacktrace(debug_backtrace()));
  */
-function parse_backtrace($raw_trace, $args_shown = FALSE, $options = array()) {
+function parseBacktrace($raw_trace, $args_shown = FALSE, $options = array()) {
   $indent_level = 0;
   $output       = array();
 
@@ -438,7 +448,7 @@ function parse_backtrace($raw_trace, $args_shown = FALSE, $options = array()) {
  * @param mixed  $data    - Defined in `dump()`.
  * @param string $label   - The label to associate with the data.
  * @param bool   $clear   - Clears the error log before tracing.
- * @param bool   $options - Defined in `dump()`.
+ * @param array  $options - Defined in `dump()`.
  *
  * @see traces()
  * @uses dump()
@@ -447,10 +457,14 @@ function parse_backtrace($raw_trace, $args_shown = FALSE, $options = array()) {
  *   trace($var0);
  *   trace($var1, 'variable1');
  *
+ * @todo See if we can get the passed variable's name using this:
+ *       {@link http://stackoverflow.com/a/2414745/1935675}
+ *       or this:
+ *       {@link http://stackoverflow.com/a/2222404/1935675}
  */
 function trace($data, $label = '', $clear = FALSE, $options = array()) {
   if ($clear) {
-    clear_log();
+    clearLog();
   }
 
   $output   = array();
@@ -482,7 +496,7 @@ function trace($data, $label = '', $clear = FALSE, $options = array()) {
  *                         The keys of which are the labels and the
  *                         values are the data.
  * @param bool  $clear   - Clears the error log before tracing.
- * @param bool  $options - Defined in `dump()`.
+ * @param array $options - Defined in `dump()`.
  *
  * @see trace()
  * @uses dump()
@@ -501,7 +515,7 @@ function traces($data, $clear = FALSE, $options = array()) {
   }
 
   if ($clear) {
-    clear_log();
+    clearLog();
   }
 
   $output   = array();
