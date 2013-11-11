@@ -273,15 +273,15 @@ function dump($data, $options = array(), $indent_level = 0) {
         }
 
         // Do step 3.
-        ksort($entries['labelled']['one_liners']);
+        ksort($entries['labelled']['one_liners'        ]);
         ksort($entries['labelled']['filled_collections']);
-        ksort($entries['numbered']['one_liners']);
+        ksort($entries['numbered']['one_liners'        ]);
         ksort($entries['numbered']['filled_collections']);
 
         // Apply the new ordering.
-        $data = $entries['labelled']['one_liners']
+        $data = $entries['labelled']['one_liners'        ]
               + $entries['labelled']['filled_collections']
-              + $entries['numbered']['one_liners']
+              + $entries['numbered']['one_liners'        ]
               + $entries['numbered']['filled_collections'];
       }
       elseif ($sort_style) {
@@ -480,6 +480,14 @@ function trace($data, $label = '', $clear = FALSE, $options = array()) {
   error_log(implode(PHP_EOL, $output));
 }
 
+
+// -----------------------------------------------------------------------------
+
+/* *
+// Coming soon...
+trace_start_set()
+trace_finish_set()
+/* */
 
 // -----------------------------------------------------------------------------
 
