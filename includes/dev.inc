@@ -153,6 +153,9 @@ function is_assoc($array) {
 function dump($data, $options = array(), $indent_level = 0) {
   $themes = array(
     'json' => array(
+      // TODO
+      // - add a way to properly escape double quotes
+      // - add a way to properly escape Unicode characters
       'array_empty'           => '[]',  'array_open'       => '[', 'array_close'       => ']',
       'assoc_array_empty'     => '{}',  'assoc_array_open' => '{', 'assoc_array_close' => '}',
       'object_empty'          => '{}',  'object_open'      => '{', 'object_close'      => '}',
@@ -477,6 +480,13 @@ function trace($data, $label = '', $clear = FALSE, $options = array()) {
   $output[] = '';
   $output[] = '';
 
+  // Remove whitespace at the end of lines.
+  $lines  = explode(PHP_EOL, implode(PHP_EOL, $output));
+  $output = array();
+  foreach ($lines as $line) {
+    $output[] = rtrim($line);
+  }
+
   error_log(implode(PHP_EOL, $output));
 }
 
@@ -533,11 +543,18 @@ function traces($data, $clear = FALSE, $options = array()) {
 
   foreach ($data as $key => $value) {
     $output[] = '';
-    $output[] = '' . ($key && is_string($key) ? $key . '  «  ' : '') . dump($value, $options);
+    $output[] = ($key && is_string($key) ? $key . '  «  ' : '') . dump($value, $options);
   }
 
   $output[] = '';
   $output[] = '';
+
+  // Remove whitespace at the end of lines.
+  $lines  = explode(PHP_EOL, implode(PHP_EOL, $output));
+  $output = array();
+  foreach ($lines as $line) {
+    $output[] = rtrim($line);
+  }
 
   error_log(implode(PHP_EOL, $output));
 }
