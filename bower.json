@@ -1,0 +1,15 @@
+{
+  "name": "your-app",
+  "version": "0.0.1",
+  "homepage": "",
+  "license": "MIT",
+  "authors": [
+    "Your Name name <your@email.com>"
+  ],
+  "dependencies": {
+    "blanket": "*",
+    "helium-css": "*",
+    "holderjs": "*",
+    "traceKit": "*"
+  }
+}
