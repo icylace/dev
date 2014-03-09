@@ -10,6 +10,7 @@
     "blanket": "*",
     "helium-css": "*",
     "holderjs": "*",
+    "quail": "*",
     "traceKit": "*"
   }
 }
