@@ -1,4 +1,5 @@
 <?php
+
 /**
  * =================
  * DEVELOPMENT TOOLS
@@ -148,6 +149,8 @@ function is_assoc($array) {
  * @used-by traces()
  *
  * @todo Handle closures.  `Requests::get()` might be a decent test.
+ * @todo Handle objects better.  Laravel models seem good for testing.
+ * @todo Refactor.
  *
  */
 function dump($data, $options = array(), $indent_level = 0) {
@@ -156,46 +159,46 @@ function dump($data, $options = array(), $indent_level = 0) {
       // TODO
       // - add a way to properly escape double quotes
       // - add a way to properly escape Unicode characters
-      'array_empty'           => '[]',  'array_open'       => '[', 'array_close'       => ']',
-      'assoc_array_empty'     => '{}',  'assoc_array_open' => '{', 'assoc_array_close' => '}',
-      'object_empty'          => '{}',  'object_open'      => '{', 'object_close'      => '}',
-      'string_key_open'       => '"',   'string_key_close' => '"',
-      'string_open'           => '"',   'string_close'     => '"',
-      'assignment'            => ':',   'assignment_align' => ALIGN_LEFT,
-      'indent_unit'           => '  ',  'separator_unit'   => ' ',
-      'key_separator'         => '',    'value_separator'  => ' ',
-      'collection_assignment' => ': ',  'item_separator'   => ',',
-      'last_item_separator'   => '',    'line_separator'   => PHP_EOL,
+      'array_empty'           => '[]',   'array_open'       => '[',   'array_close'       => ']',
+      'assoc_array_empty'     => '{}',   'assoc_array_open' => '{',   'assoc_array_close' => '}',
+      'object_empty'          => '{}',   'object_open'      => '{',   'object_close'      => '}',
+      'string_key_open'       => '"',    'string_key_close' => '"',
+      'string_open'           => '"',    'string_close'     => '"',
+      'assignment'            => ':',    'assignment_align' => ALIGN_LEFT,
+      'indent_unit'           => '  ',   'separator_unit'   => ' ',
+      'key_separator'         => '',     'value_separator'  => ' ',
+      'collection_assignment' => ': ',   'item_separator'   => ',',
+      'last_item_separator'   => '',     'line_separator'   => PHP_EOL,
       'multiline_separator'   => PHP_EOL,
       'showing_array_indexes' => FALSE,
       'null'                  => 'null',
     ),
     'minimal' => array(
-      'array_empty'           => '[]',  'array_open'       => '',  'array_close'       => '',
-      'assoc_array_empty'     => '[]',  'assoc_array_open' => '',  'assoc_array_close' => '',
-      'object_empty'          => '{}',  'object_open'      => ':', 'object_close'      => '',
-      'string_key_open'       => '',    'string_key_close' => '',
-      'string_open'           => '\'',  'string_close'     => '\'',
-      'assignment'            => '  ‹', 'assignment_align' => ALIGN_RIGHT,
-      'indent_unit'           => '  ',  'separator_unit'   => ' ',
-      'key_separator'         => ' ',   'value_separator'  => '  ',
-      'collection_assignment' => '',    'item_separator'   => '',
-      'last_item_separator'   => '',    'line_separator'   => PHP_EOL,
+      'array_empty'           => '[]',   'array_open'       => '',    'array_close'       => '',
+      'assoc_array_empty'     => '[]',   'assoc_array_open' => '',    'assoc_array_close' => '',
+      'object_empty'          => '{}',   'object_open'      => ':',   'object_close'      => '',
+      'string_key_open'       => '',     'string_key_close' => '',
+      'string_open'           => '\'',   'string_close'     => '\'',
+      'assignment'            => '  ‹',  'assignment_align' => ALIGN_RIGHT,
+      'indent_unit'           => '  ',   'separator_unit'   => ' ',
+      'key_separator'         => ' ',    'value_separator'  => '  ',
+      'collection_assignment' => '',     'item_separator'   => '',
+      'last_item_separator'   => '',     'line_separator'   => PHP_EOL,
       'multiline_separator'   => PHP_EOL,
       'showing_array_indexes' => TRUE,
       'null'                  => 'null',
     ),
     'pseudo-php' => array(
-      'array_empty'           => 'array()', 'array_open'       => 'array(', 'array_close'       => ')',
-      'assoc_array_empty'     => 'array()', 'assoc_array_open' => 'array(', 'assoc_array_close' => ')',
-      'object_empty'          => '{}',      'object_open'      => '{',      'object_close'      => '}',
-      'string_key_open'       => '\'',      'string_key_close' => '\'',
-      'string_open'           => '\'',      'string_close'     => '\'',
-      'assignment'            => '=>',      'assignment_align' => ALIGN_LEFT,
-      'indent_unit'           => '',        'separator_unit'   => '',
-      'key_separator'         => '',        'value_separator'  => '',
-      'collection_assignment' => '=>',      'item_separator'   => ',',
-      'last_item_separator'   => '',        'line_separator'   => '',
+      'array_empty'           => 'array()',   'array_open'       => 'array(',   'array_close'       => ')',
+      'assoc_array_empty'     => 'array()',   'assoc_array_open' => 'array(',   'assoc_array_close' => ')',
+      'object_empty'          => '{}',        'object_open'      => '{',        'object_close'      => '}',
+      'string_key_open'       => '\'',        'string_key_close' => '\'',
+      'string_open'           => '\'',        'string_close'     => '\'',
+      'assignment'            => '=>',        'assignment_align' => ALIGN_LEFT,
+      'indent_unit'           => '',          'separator_unit'   => '',
+      'key_separator'         => '',          'value_separator'  => '',
+      'collection_assignment' => '=>',        'item_separator'   => ',',
+      'last_item_separator'   => '',          'line_separator'   => '',
       'multiline_separator'   => PHP_EOL,
       'showing_array_indexes' => FALSE,
       'null'                  => 'NULL',
@@ -203,8 +206,8 @@ function dump($data, $options = array(), $indent_level = 0) {
   );
 
   $multilines_style = (isset($options['multilines_style']) ? $options['multilines_style'] : MULTILINES_REGULAR);
-  $sort_style       = (isset($options['sort_style'      ]) ? $options['sort_style'      ] : NULL);
-  $theme            = (isset($options['theme'           ]) ? $options['theme'           ] : NULL);
+  $sort_style       = (isset($options['sort_style'])       ? $options['sort_style']       : NULL);
+  $theme            = (isset($options['theme'])            ? $options['theme']            : NULL);
 
   if (!is_array($theme)) {
     $theme = (is_string($theme) ? $themes[$theme] : $themes['minimal']);
@@ -276,15 +279,15 @@ function dump($data, $options = array(), $indent_level = 0) {
         }
 
         // Do step 3.
-        ksort($entries['labelled']['one_liners'        ]);
+        ksort($entries['labelled']['one_liners']);
         ksort($entries['labelled']['filled_collections']);
-        ksort($entries['numbered']['one_liners'        ]);
+        ksort($entries['numbered']['one_liners']);
         ksort($entries['numbered']['filled_collections']);
 
         // Apply the new ordering.
-        $data = $entries['labelled']['one_liners'        ]
+        $data = $entries['labelled']['one_liners']
               + $entries['labelled']['filled_collections']
-              + $entries['numbered']['one_liners'        ]
+              + $entries['numbered']['one_liners']
               + $entries['numbered']['filled_collections'];
       }
       elseif ($sort_style) {
