@@ -147,8 +147,6 @@ function is_associative($array) {
  * @used-by c()
  * @used-by cc()
  *
- * @todo Handle add option to select what characters to escape in strings.
- *       Useful for quotes.
  * @todo Handle closures.  `Requests::get()` might be a decent test.
  * @todo Handle objects better.  Laravel models seem good for testing.
  * @todo Refactor.
@@ -160,7 +158,6 @@ function dump($data, $options = [], $indent_level = 0) {
     'json' => [
 
       // TODO
-      // - add a way to properly escape double quotes
       // - add a way to properly escape Unicode characters
 
       'array_open'  => '[',
@@ -177,10 +174,11 @@ function dump($data, $options = [], $indent_level = 0) {
 
       'string_key_open'       => '"',    'string_key_close' => '"',
       'string_open'           => '"',    'string_close'     => '"',
+      'string_find'           => '"',    'string_replace'   => '\\"',
       'assignment'            => ':',    'assignment_align' => ALIGN_LEFT,
       'indent_unit'           => '  ',   'separator_unit'   => ' ',
       'key_separator'         => '',     'value_separator'  => ' ',
-      'collection_assignment' => ': ',   'item_separator'   => ',',
+      'assignment_in_group'   => ': ',   'item_separator'   => ',',
       'last_item_separator'   => '',     'line_separator'   => PHP_EOL,
       'multiline_separator'   => PHP_EOL,
       'showing_array_indexes' => false,
@@ -202,10 +200,11 @@ function dump($data, $options = [], $indent_level = 0) {
 
       'string_key_open'       => '',      'string_key_close' => '',
       'string_open'           => '\'',    'string_close'     => '\'',
+      'string_find'           => '\'',    'string_replace'   => '\\\'',
       'assignment'            => '  ‹',   'assignment_align' => ALIGN_RIGHT,
       'indent_unit'           => '  ',    'separator_unit'   => ' ',
       'key_separator'         => ' ',     'value_separator'  => '  ',
-      'collection_assignment' => '',      'item_separator'   => '',
+      'assignment_in_group'   => '',      'item_separator'   => '',
       'last_item_separator'   => '',      'line_separator'   => PHP_EOL,
       'multiline_separator'   => PHP_EOL,
       'showing_array_indexes' => true,
@@ -227,10 +226,11 @@ function dump($data, $options = [], $indent_level = 0) {
 
       'string_key_open'       => '\'',   'string_key_close' => '\'',
       'string_open'           => '\'',   'string_close'     => '\'',
+      'string_find'           => '\'',   'string_replace'   => '\\\'',
       'assignment'            => '=>',   'assignment_align' => ALIGN_LEFT,
       'indent_unit'           => '',     'separator_unit'   => '',
       'key_separator'         => '',     'value_separator'  => '',
-      'collection_assignment' => '=>',   'item_separator'   => ',',
+      'assignment_in_group'   => '=>',   'item_separator'   => ',',
       'last_item_separator'   => '',     'line_separator'   => '',
       'multiline_separator'   => PHP_EOL,
       'showing_array_indexes' => false,
@@ -252,10 +252,11 @@ function dump($data, $options = [], $indent_level = 0) {
 
       'string_key_open'       => '',      'string_key_close' => '',
       'string_open'           => '\'',    'string_close'     => '\'',
+      'string_find'           => '\'',    'string_replace'   => '\\\'',
       'assignment'            => '  ',    'assignment_align' => ALIGN_RIGHT,
       'indent_unit'           => '  ',    'separator_unit'   => ' ',
       'key_separator'         => ' ',     'value_separator'  => '  ',
-      'collection_assignment' => '',      'item_separator'   => '',
+      'assignment_in_group'   => '',      'item_separator'   => '',
       'last_item_separator'   => '',      'line_separator'   => PHP_EOL,
       'multiline_separator'   => PHP_EOL,
       'showing_array_indexes' => true,
@@ -264,56 +265,62 @@ function dump($data, $options = [], $indent_level = 0) {
 
   ];
 
-  $multilines_style = (isset($options['multilines_style']) ? $options['multilines_style'] : MULTILINES_REGULAR);
-  $sort_style       = (isset($options['sort_style'      ]) ? $options['sort_style'      ] : null              );
-  $theme            = (isset($options['theme'           ]) ? $options['theme'           ] : null              );
+  $multilines_style = isset($options['multilines_style']) ? $options['multilines_style'] : MULTILINES_REGULAR;
+  $sort_style       = isset($options['sort_style'      ]) ? $options['sort_style'      ] : null;
+  $theme            = isset($options['theme'           ]) ? $options['theme'           ] : null;
 
   if (!is_array($theme)) {
-    $theme = (is_string($theme) ? $themes[$theme] : $themes['space']);
+    $theme = is_string($theme) ? $themes[$theme] : $themes['space'];
   }
 
   //
   // Setup the render theme for use.  Default to a prettified JSON format.
   //
 
-  $collection_type = '';
-  if (is_associative($data)) {
-    $collection_type = 'associative_array';
-  } elseif (is_array($data)) {
-    $collection_type = 'array';
-  } elseif (is_object($data)) {
-    $collection_type = 'object';
-  }
+  // $group_type = '';
+  // if (is_associative($data)) {
+  //   $group_type = 'associative_array';
+  // } elseif (is_array($data)) {
+  //   $group_type = 'array';
+  // } elseif (is_object($data)) {
+  //   $group_type = 'object';
+  // }
 
+  $group_type = is_associative($data) ? 'associative_array'
+              : is_array($data)       ? 'array'
+              : is_object($data)      ? 'object'
+              : '';
+
+  // Create the local theme variables.
   $default        = $themes['json'];
   $theme_elements = array_keys($default);
   foreach ($theme_elements as $x) {
-    $$x = (isset($theme[$x]) ? $theme[$x] : $default[$x]);
+    $$x = isset($theme[$x]) ? $theme[$x] : $default[$x];
   }
 
   $output = [];
 
   // Pretty-print arrays and objects in a pseudo-JSON style.
-  if (!empty($collection_type)) {
-    $collection_empty = ${$collection_type . '_empty'};
-    $collection_open  = ${$collection_type . '_open' };
-    $collection_close = ${$collection_type . '_close'};
+  if (!empty($group_type)) {
+    $group_empty = ${$group_type . '_empty'};
+    $group_open  = ${$group_type . '_open' };
+    $group_close = ${$group_type . '_close'};
 
     if (empty($data)) {
-      $output[] = $collection_empty;
+      $output[] = $group_empty;
     } else {
       if ($sort_style === SORT_ONE_LINER_VS_ARRAY) {
-        /**
-         *  Sort the entries based on this ordering:
-         *
-         *  1.  Separate into string indexes group and numerical indexes group
-         *      with the numerical indexes group in the ascended position.
-         *
-         *  2.  Within each group separate into non-empty/filled collection
-         *      subgroup and "one-liner" subgroup.
-         *
-         *  3.  Within each subgroup alphabetize in ascending order.
-         */
+        //
+        //  Sort the entries based on this ordering:
+        //
+        //  1.  Separate into string indexes group and numerical indexes group
+        //      with the numerical indexes group in the ascended position.
+        //
+        //  2.  Within each group separate into non-empty/filled collection
+        //      subgroup and "one-liner" subgroup.
+        //
+        //  3.  Within each subgroup alphabetize in ascending order.
+        //
 
         $entries = [
           'numbered' => [
@@ -329,8 +336,8 @@ function dump($data, $options = [], $indent_level = 0) {
         // Do steps 1 and 2.
         foreach ($data as $key => $value) {
           $a_filled_collection = (is_object($value) || is_array($value)) && !empty($value);
-          $key_kind            = (is_int($key)         ? 'numbered'           : 'labelled'  );
-          $value_kind          = ($a_filled_collection ? 'filled_collections' : 'one_liners');
+          $key_kind            = is_int($key)         ? 'numbered'           : 'labelled';
+          $value_kind          = $a_filled_collection ? 'filled_collections' : 'one_liners';
           $entries[$key_kind][$value_kind][$key] = $value;
         }
 
@@ -360,17 +367,17 @@ function dump($data, $options = [], $indent_level = 0) {
         }
       }
 
-      $output[]          = $collection_open;
+      $output[]          = $group_open;
       $indent_spacing    = str_repeat($indent_unit, $indent_level);
-      $collection_indent = $indent_spacing . $indent_unit;
+      $group_indent = $indent_spacing . $indent_unit;
 
       end($data);
       $last_item_key = key($data);
 
       foreach ($data as $key => $value) {
         $a_filled_collection = (is_object($value) || is_array($value)) && !empty($value);
-        $cur_item_separator  = ($key === $last_item_key ? $last_item_separator : $item_separator);
-        $separator           = $collection_assignment;
+        $cur_item_separator  = $key === $last_item_key ? $last_item_separator : $item_separator;
+        $separator           = $assignment_in_group;
         $key_label           = $string_key_open . $key . $string_key_close;
         $dumped_value        = dump($value, $options, $indent_level + 1);
 
@@ -395,7 +402,7 @@ function dump($data, $options = [], $indent_level = 0) {
               $separator .= $multiline_separator;
             } else {
               if ($multilines_style === MULTILINES_INDENTED_BELOW) {
-                $separator   .= $multiline_separator . $collection_indent . $indent_unit;
+                $separator   .= $multiline_separator . $group_indent . $indent_unit;
                 $value_indent = $indent_unit;
               } else {
                 $separator   .= $value_separator;
@@ -403,7 +410,7 @@ function dump($data, $options = [], $indent_level = 0) {
               }
               $lines          = explode(PHP_EOL, $dumped_value);
               $indented_lines = [];
-              $value_indent   = $collection_indent . $value_indent;
+              $value_indent   = $group_indent . $value_indent;
               for ($i = 0, $l = count($lines); $i < $l; ++$i) {
                 if ($i > 0 && !empty($lines[$i]) && $lines[$i] !== "\r") {
                   $indented_lines[] = $value_indent . $lines[$i];
@@ -419,19 +426,20 @@ function dump($data, $options = [], $indent_level = 0) {
         }
 
         if ($showing_array_indexes || !is_array($data) || !is_numeric($key)) {
-          $output[] = $collection_indent . $key_label . $separator . $dumped_value . $cur_item_separator;
+          $output[] = $group_indent . $key_label . $separator . $dumped_value . $cur_item_separator;
         } else {
-          $output[] = $collection_indent . $dumped_value . $cur_item_separator;
+          $output[] = $group_indent . $dumped_value . $cur_item_separator;
         }
       }
 
-      if (!empty($collection_close)) {
-        $output[] = $indent_spacing . $collection_close;
+      if (!empty($group_close)) {
+        $output[] = $indent_spacing . $group_close;
       }
     }
   } elseif ($data === null) {
     $output[] = $null;
   } elseif (is_string($data)) {
+    $data     = str_replace($string_find, $string_replace, $data);
     $output[] = $string_open . $data . $string_close;
   } else {
     $output[] = var_export($data, true);
@@ -519,10 +527,11 @@ function c($data, $label = '', $clear = false, $options = []) {
   $output   = [];
   $output[] = str_repeat(':', 80);
 
-  // Show the function that's doing the trace.
+  // Show the function that's doing the variable dump.
   $backtrace = debug_backtrace();
   if (isset($backtrace[1]['function'])) {
-    $fn_name  = $backtrace[1]['function'] . '()';
+    $class    = isset($backtrace[1]['class']) ? $backtrace[1]['class'] . $backtrace[1]['type'] : '';
+    $fn_name  = $class . $backtrace[1]['function'] . '()';
     $output[] = $fn_name . '  ' . str_repeat(':', 105 - strlen($fn_name));
   }
 
@@ -546,8 +555,8 @@ function c($data, $label = '', $clear = false, $options = []) {
 
 /* *
 // Coming soon...
-trace_start_set()
-trace_finish_set()
+c_start_set()
+c_finish_set()
 /* */
 
 // -----------------------------------------------------------------------------
