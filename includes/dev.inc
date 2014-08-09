@@ -566,10 +566,10 @@ trace_finish_set()
  * @uses dump()
  *
  * Example usage:
- *   cc(array(
+ *   cc([
  *     'variable2' => $var2,
  *     'variable3' => $var3,
- *   ));
+ *   ]);
  *
  */
 function cc($data, $clear = false, $options = []) {
