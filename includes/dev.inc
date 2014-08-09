@@ -7,7 +7,7 @@
  *
  * These are some functions that aid in the development process.
  *
- * @copyright Copyright (c) 2013 Ron Martinez
+ * @copyright Copyright (c) 2014 Ron Martinez
  *            Except for `read_last_line()` which is the copyright of its owner.
  * @license   http://opensource.org/licenses/MIT   MIT License
  * @version   0.2.0
@@ -52,7 +52,7 @@ function auto_clear_log() {
     }
 
     // Read until the start of file or first newline char.
-    while ($char !== FALSE && $char !== "\n" && $char !== "\r") {
+    while ($char !== false && $char !== "\n" && $char !== "\r") {
       // Prepend the new char.
       $line = $char . $line;
       fseek($f, $cursor--, SEEK_END);
@@ -66,9 +66,8 @@ function auto_clear_log() {
 
   if (strpos($line, DEV_AUTO_CLEAR_ENABLED) > 0) {
     clear_log();
-  }
-  else {
-    error_log(var_export(DEV_AUTO_CLEAR_ENABLED, TRUE));
+  } else {
+    error_log(var_export(DEV_AUTO_CLEAR_ENABLED, true));
   }
 }
 
@@ -86,7 +85,7 @@ function step() {
 
 
 function backtrace() {
-  trace(parse_backtrace(debug_backtrace()));
+  c(trace(debug_backtrace()));
 }
 
 
@@ -96,8 +95,8 @@ function backtrace() {
 /**
  * Clears the error log.
  */
-function clear_log() {
-  file_put_contents(DEV_LOG, NULL);
+function clear_log($log_file = DEV_LOG) {
+  file_put_contents($log_file, null);
 }
 
 
@@ -108,7 +107,7 @@ function clear_log() {
  * Based on:
  * http://stackoverflow.com/a/4254008/1935675
  */
-function is_assoc($array) {
+function is_associative($array) {
   return is_array($array) && (bool)count(array_filter(array_keys($array), 'is_string'));
 }
 
@@ -135,7 +134,7 @@ function is_assoc($array) {
  *          - MULTILINES_INDENTED_BELOW: Multiple lines are rendered below
  *            the assignment symbol is also indented.
  *        - 'sort_style' (int|string)
- *          The type of sorting to employ.  Defaults to NULL which
+ *          The type of sorting to employ.  Defaults to null which
  *          prevents sorting.  Standard sort flags are defined here:
  *          ({@link http://us3.php.net/manual/en/function.sort.php})
  *        - 'theme' (string|array)
@@ -144,24 +143,38 @@ function is_assoc($array) {
  *
  * @return string - The formatted data.
  *
- * @used-by parse_backtrace()
  * @used-by trace()
- * @used-by traces()
+ * @used-by c()
+ * @used-by cc()
  *
+ * @todo Handle add option to select what characters to escape in strings.
+ *       Useful for quotes.
  * @todo Handle closures.  `Requests::get()` might be a decent test.
  * @todo Handle objects better.  Laravel models seem good for testing.
  * @todo Refactor.
  *
  */
-function dump($data, $options = array(), $indent_level = 0) {
-  $themes = array(
-    'json' => array(
+function dump($data, $options = [], $indent_level = 0) {
+  $themes = [
+
+    'json' => [
+
       // TODO
       // - add a way to properly escape double quotes
       // - add a way to properly escape Unicode characters
-      'array_empty'           => '[]',   'array_open'       => '[',   'array_close'       => ']',
-      'assoc_array_empty'     => '{}',   'assoc_array_open' => '{',   'assoc_array_close' => '}',
-      'object_empty'          => '{}',   'object_open'      => '{',   'object_close'      => '}',
+
+      'array_open'  => '[',
+      'array_close' => ']',
+      'array_empty' => '[]',
+
+      'associative_array_open'  => '{',
+      'associative_array_close' => '}',
+      'associative_array_empty' => '{}',
+
+      'object_open'  => '{',
+      'object_close' => '}',
+      'object_empty' => '{}',
+
       'string_key_open'       => '"',    'string_key_close' => '"',
       'string_open'           => '"',    'string_close'     => '"',
       'assignment'            => ':',    'assignment_align' => ALIGN_LEFT,
@@ -170,47 +183,93 @@ function dump($data, $options = array(), $indent_level = 0) {
       'collection_assignment' => ': ',   'item_separator'   => ',',
       'last_item_separator'   => '',     'line_separator'   => PHP_EOL,
       'multiline_separator'   => PHP_EOL,
-      'showing_array_indexes' => FALSE,
+      'showing_array_indexes' => false,
       'null'                  => 'null',
-    ),
-    'minimal' => array(
-      'array_empty'           => '[]',   'array_open'       => '',    'array_close'       => '',
-      'assoc_array_empty'     => '[]',   'assoc_array_open' => '',    'assoc_array_close' => '',
-      'object_empty'          => '{}',   'object_open'      => ':',   'object_close'      => '',
-      'string_key_open'       => '',     'string_key_close' => '',
+    ],
+
+    'minimal' => [
+      'array_empty' => '[]',
+      'array_open'  => '',
+      'array_close' => '',
+
+      'associative_array_empty' => '[]',
+      'associative_array_open'  => '',
+      'associative_array_close' => '',
+
+      'object_empty' => '{}',
+      'object_open'  => ':',
+      'object_close' => '',
+
+      'string_key_open'       => '',      'string_key_close' => '',
+      'string_open'           => '\'',    'string_close'     => '\'',
+      'assignment'            => '  ‹',   'assignment_align' => ALIGN_RIGHT,
+      'indent_unit'           => '  ',    'separator_unit'   => ' ',
+      'key_separator'         => ' ',     'value_separator'  => '  ',
+      'collection_assignment' => '',      'item_separator'   => '',
+      'last_item_separator'   => '',      'line_separator'   => PHP_EOL,
+      'multiline_separator'   => PHP_EOL,
+      'showing_array_indexes' => true,
+      'null'                  => 'null',
+    ],
+
+    'pseudo-php' => [
+      'array_empty' => 'array()',
+      'array_open'  => 'array(',
+      'array_close' => ')',
+
+      'associative_array_empty' => 'array()',
+      'associative_array_open'  => 'array(',
+      'associative_array_close' => ')',
+
+      'object_empty' => '{}',
+      'object_open'  => '{',
+      'object_close' => '}',
+
+      'string_key_open'       => '\'',   'string_key_close' => '\'',
       'string_open'           => '\'',   'string_close'     => '\'',
-      'assignment'            => '  ‹',  'assignment_align' => ALIGN_RIGHT,
-      'indent_unit'           => '  ',   'separator_unit'   => ' ',
-      'key_separator'         => ' ',    'value_separator'  => '  ',
-      'collection_assignment' => '',     'item_separator'   => '',
-      'last_item_separator'   => '',     'line_separator'   => PHP_EOL,
+      'assignment'            => '=>',   'assignment_align' => ALIGN_LEFT,
+      'indent_unit'           => '',     'separator_unit'   => '',
+      'key_separator'         => '',     'value_separator'  => '',
+      'collection_assignment' => '=>',   'item_separator'   => ',',
+      'last_item_separator'   => '',     'line_separator'   => '',
       'multiline_separator'   => PHP_EOL,
-      'showing_array_indexes' => TRUE,
-      'null'                  => 'null',
-    ),
-    'pseudo-php' => array(
-      'array_empty'           => 'array()',   'array_open'       => 'array(',   'array_close'       => ')',
-      'assoc_array_empty'     => 'array()',   'assoc_array_open' => 'array(',   'assoc_array_close' => ')',
-      'object_empty'          => '{}',        'object_open'      => '{',        'object_close'      => '}',
-      'string_key_open'       => '\'',        'string_key_close' => '\'',
-      'string_open'           => '\'',        'string_close'     => '\'',
-      'assignment'            => '=>',        'assignment_align' => ALIGN_LEFT,
-      'indent_unit'           => '',          'separator_unit'   => '',
-      'key_separator'         => '',          'value_separator'  => '',
-      'collection_assignment' => '=>',        'item_separator'   => ',',
-      'last_item_separator'   => '',          'line_separator'   => '',
-      'multiline_separator'   => PHP_EOL,
-      'showing_array_indexes' => FALSE,
+      'showing_array_indexes' => false,
       'null'                  => 'NULL',
-    ),
-  );
+    ],
+
+    'space' => [
+      'array_empty' => '[]',
+      'array_open'  => '',
+      'array_close' => '',
+
+      'associative_array_empty' => '[]',
+      'associative_array_open'  => '',
+      'associative_array_close' => '',
+
+      'object_empty' => '{}',
+      'object_open'  => ':',
+      'object_close' => '',
+
+      'string_key_open'       => '',      'string_key_close' => '',
+      'string_open'           => '\'',    'string_close'     => '\'',
+      'assignment'            => '  ',    'assignment_align' => ALIGN_RIGHT,
+      'indent_unit'           => '  ',    'separator_unit'   => ' ',
+      'key_separator'         => ' ',     'value_separator'  => '  ',
+      'collection_assignment' => '',      'item_separator'   => '',
+      'last_item_separator'   => '',      'line_separator'   => PHP_EOL,
+      'multiline_separator'   => PHP_EOL,
+      'showing_array_indexes' => true,
+      'null'                  => 'null',
+    ],
+
+  ];
 
   $multilines_style = (isset($options['multilines_style']) ? $options['multilines_style'] : MULTILINES_REGULAR);
-  $sort_style       = (isset($options['sort_style'])       ? $options['sort_style']       : NULL);
-  $theme            = (isset($options['theme'])            ? $options['theme']            : NULL);
+  $sort_style       = (isset($options['sort_style'      ]) ? $options['sort_style'      ] : null              );
+  $theme            = (isset($options['theme'           ]) ? $options['theme'           ] : null              );
 
   if (!is_array($theme)) {
-    $theme = (is_string($theme) ? $themes[$theme] : $themes['minimal']);
+    $theme = (is_string($theme) ? $themes[$theme] : $themes['space']);
   }
 
   //
@@ -218,13 +277,11 @@ function dump($data, $options = array(), $indent_level = 0) {
   //
 
   $collection_type = '';
-  if (is_assoc($data)) {
-    $collection_type = 'assoc_array';
-  }
-  else if (is_array($data)) {
+  if (is_associative($data)) {
+    $collection_type = 'associative_array';
+  } elseif (is_array($data)) {
     $collection_type = 'array';
-  }
-  else if (is_object($data)) {
+  } elseif (is_object($data)) {
     $collection_type = 'object';
   }
 
@@ -234,7 +291,7 @@ function dump($data, $options = array(), $indent_level = 0) {
     $$x = (isset($theme[$x]) ? $theme[$x] : $default[$x]);
   }
 
-  $output = array();
+  $output = [];
 
   // Pretty-print arrays and objects in a pseudo-JSON style.
   if (!empty($collection_type)) {
@@ -244,8 +301,7 @@ function dump($data, $options = array(), $indent_level = 0) {
 
     if (empty($data)) {
       $output[] = $collection_empty;
-    }
-    else {
+    } else {
       if ($sort_style === SORT_ONE_LINER_VS_ARRAY) {
         /**
          *  Sort the entries based on this ordering:
@@ -259,38 +315,37 @@ function dump($data, $options = array(), $indent_level = 0) {
          *  3.  Within each subgroup alphabetize in ascending order.
          */
 
-        $entries = array(
-          'numbered' => array(
-            'one_liners'         => array(),
-            'filled_collections' => array(),
-          ),
-          'labelled' => array(
-            'one_liners'         => array(),
-            'filled_collections' => array(),
-          ),
-        );
+        $entries = [
+          'numbered' => [
+            'one_liners'         => [],
+            'filled_collections' => [],
+          ],
+          'labelled' => [
+            'one_liners'         => [],
+            'filled_collections' => [],
+          ],
+        ];
 
         // Do steps 1 and 2.
         foreach ($data as $key => $value) {
           $a_filled_collection = (is_object($value) || is_array($value)) && !empty($value);
-          $key_kind   = (is_int($key)         ? 'numbered'           : 'labelled');
-          $value_kind = ($a_filled_collection ? 'filled_collections' : 'one_liners');
+          $key_kind            = (is_int($key)         ? 'numbered'           : 'labelled'  );
+          $value_kind          = ($a_filled_collection ? 'filled_collections' : 'one_liners');
           $entries[$key_kind][$value_kind][$key] = $value;
         }
 
         // Do step 3.
-        ksort($entries['labelled']['one_liners']);
+        ksort($entries['labelled']['one_liners'        ]);
         ksort($entries['labelled']['filled_collections']);
-        ksort($entries['numbered']['one_liners']);
+        ksort($entries['numbered']['one_liners'        ]);
         ksort($entries['numbered']['filled_collections']);
 
         // Apply the new ordering.
-        $data = $entries['labelled']['one_liners']
+        $data = $entries['labelled']['one_liners'        ]
               + $entries['labelled']['filled_collections']
-              + $entries['numbered']['one_liners']
+              + $entries['numbered']['one_liners'        ]
               + $entries['numbered']['filled_collections'];
-      }
-      elseif ($sort_style) {
+      } elseif ($sort_style) {
         ksort($data, $sort_style);
       }
 
@@ -326,50 +381,46 @@ function dump($data, $options = array(), $indent_level = 0) {
           if ($assignment_align === ALIGN_LEFT) {
             $key_separation_gap   = 0;
             $value_separation_gap = $separation_gap;
-          }
-          else {
+          } else {
             $key_separation_gap   = $separation_gap;
             $value_separation_gap = 0;
           }
-          $separator = str_repeat($key_separator, $key_separation_gap) . $assignment . str_repeat($value_separator, $value_separation_gap);
+          $separator = str_repeat($key_separator, $key_separation_gap)
+                     . $assignment
+                     . str_repeat($value_separator, $value_separation_gap);
 
           // See if we're working with a multiline string.
-          if (strpos($dumped_value, PHP_EOL) !== FALSE) {
+          if (strpos($dumped_value, PHP_EOL) !== false) {
             if ($multilines_style === MULTILINES_BELOW) {
               $separator .= $multiline_separator;
-            }
-            else {
+            } else {
               if ($multilines_style === MULTILINES_INDENTED_BELOW) {
                 $separator   .= $multiline_separator . $collection_indent . $indent_unit;
                 $value_indent = $indent_unit;
-              }
-              else {
+              } else {
                 $separator   .= $value_separator;
                 $value_indent = str_repeat($separator_unit, strlen($key_label . $assignment . $value_separator));
               }
               $lines          = explode(PHP_EOL, $dumped_value);
-              $indented_lines = array();
+              $indented_lines = [];
               $value_indent   = $collection_indent . $value_indent;
-              for ($i = 0, $l = count($lines); $i < $l; $i++) {
+              for ($i = 0, $l = count($lines); $i < $l; ++$i) {
                 if ($i > 0 && !empty($lines[$i]) && $lines[$i] !== "\r") {
                   $indented_lines[] = $value_indent . $lines[$i];
-                }
-                else {
+                } else {
                   $indented_lines[] = $lines[$i];
                 }
               }
               $dumped_value = implode(PHP_EOL, $indented_lines);
             }
-          }
-          else {
+          } else {
             $separator .= $value_separator;
           }
         }
 
         if ($showing_array_indexes || !is_array($data) || !is_numeric($key)) {
           $output[] = $collection_indent . $key_label . $separator . $dumped_value . $cur_item_separator;
-        }
-        else {
+        } else {
           $output[] = $collection_indent . $dumped_value . $cur_item_separator;
         }
       }
@@ -378,15 +429,12 @@ function dump($data, $options = array(), $indent_level = 0) {
         $output[] = $indent_spacing . $collection_close;
       }
     }
-  }
-  else if ($data === NULL) {
+  } elseif ($data === null) {
     $output[] = $null;
-  }
-  else if (is_string($data)) {
+  } elseif (is_string($data)) {
     $output[] = $string_open . $data . $string_close;
-  }
-  else {
-    $output[] = var_export($data, TRUE);
+  } else {
+    $output[] = var_export($data, true);
   }
 
   return implode($line_separator, $output);
@@ -411,11 +459,11 @@ function dump($data, $options = array(), $indent_level = 0) {
  * @uses dump()
  *
  * Example usage:
- *   trace(parse_backtrace(debug_backtrace()));
+ *   c(trace(debug_backtrace()));
  */
-function parse_backtrace($raw_trace, $args_shown = FALSE, $options = array()) {
+function trace($raw_trace, $args_shown = false, $options = []) {
   $indent_level = 0;
-  $output       = array();
+  $output       = [];
 
   foreach ($raw_trace as $entry) {
     $indent_spacing = str_repeat('  ', $indent_level);
@@ -451,31 +499,31 @@ function parse_backtrace($raw_trace, $args_shown = FALSE, $options = array()) {
  * @param bool   $clear   - Clears the error log before tracing.
  * @param array  $options - Defined in `dump()`.
  *
- * @see traces()
+ * @see cc()
  * @uses dump()
  *
  * Example usage:
- *   trace($var0);
- *   trace($var1, 'variable1');
+ *   c($var0);
+ *   c($var1, 'variable1');
  *
  * @todo See if we can get the passed variable's name using this:
  *       {@link http://stackoverflow.com/a/2414745/1935675}
  *       or this:
  *       {@link http://stackoverflow.com/a/2222404/1935675}
  */
-function trace($data, $label = '', $clear = FALSE, $options = array()) {
+function c($data, $label = '', $clear = false, $options = []) {
   if ($clear) {
     clear_log();
   }
 
-  $output   = array();
+  $output   = [];
   $output[] = str_repeat(':', 80);
 
   // Show the function that's doing the trace.
   $backtrace = debug_backtrace();
   if (isset($backtrace[1]['function'])) {
-    $function_name = $backtrace[1]['function'] . '()';
-    $output[]      = $function_name . '  ' . str_repeat(':', 105 - strlen($function_name));
+    $fn_name  = $backtrace[1]['function'] . '()';
+    $output[] = $fn_name . '  ' . str_repeat(':', 105 - strlen($fn_name));
   }
 
   $output[] = '';
@@ -485,7 +533,7 @@ function trace($data, $label = '', $clear = FALSE, $options = array()) {
 
   // Remove whitespace at the end of lines.
   $lines  = explode(PHP_EOL, implode(PHP_EOL, $output));
-  $output = array();
+  $output = [];
   foreach ($lines as $line) {
     $output[] = rtrim($line);
   }
@@ -506,7 +554,7 @@ trace_finish_set()
 
 
 /**
- * A variant of `trace()` which traces multiple variables.
+ * A variant of `c()` which traces multiple variables.
  *
  * @param mixed $data    - An associative array of data to be traced.
  *                         The keys of which are the labels and the
@@ -514,19 +562,19 @@ trace_finish_set()
  * @param bool  $clear   - Clears the error log before tracing.
  * @param array $options - Defined in `dump()`.
  *
- * @see trace()
+ * @see c()
  * @uses dump()
  *
  * Example usage:
- *   trace(array(
+ *   cc(array(
  *     'variable2' => $var2,
  *     'variable3' => $var3,
  *   ));
  *
  */
-function traces($data, $clear = FALSE, $options = array()) {
+function cc($data, $clear = false, $options = []) {
   if (!is_array($data)) {
-    error_log('traces() only works with an array of data to trace');
+    error_log('cc() only works with an array of data to trace');
     return;
   }
 
@@ -534,14 +582,14 @@ function traces($data, $clear = FALSE, $options = array()) {
     clear_log();
   }
 
-  $output   = array();
+  $output   = [];
   $output[] = str_repeat(':', 80);
 
   // Show the function that's doing the trace.
   $backtrace = debug_backtrace();
   if (isset($backtrace[1]['function'])) {
-    $function_name = $backtrace[1]['function'] . '()';
-    $output[]      = $function_name . '  ' . str_repeat(':', 105 - strlen($function_name));
+    $fn_name  = $backtrace[1]['function'] . '()';
+    $output[] = $fn_name . '  ' . str_repeat(':', 105 - strlen($fn_name));
   }
 
   foreach ($data as $key => $value) {
@@ -554,7 +602,7 @@ function traces($data, $clear = FALSE, $options = array()) {
 
   // Remove whitespace at the end of lines.
   $lines  = explode(PHP_EOL, implode(PHP_EOL, $output));
-  $output = array();
+  $output = [];
   foreach ($lines as $line) {
     $output[] = rtrim($line);
   }
