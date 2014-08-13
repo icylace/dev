@@ -145,11 +145,12 @@ function is_associative($array) {
  *
  * @used-by trace()
  * @used-by c()
- * @used-by cc()
+ * @used-by cs()
  *
  * @todo Handle closures.  `Requests::get()` might be a decent test.
  * @todo Handle objects better.  Laravel models seem good for testing.
  * @todo Refactor.
+ * @todo Fix empty array detection.  '{}' is being using inappropriately instead of '[]'.
  *
  */
 function dump($data, $options = [], $indent_level = 0) {
@@ -507,7 +508,7 @@ function trace($raw_trace, $args_shown = false, $options = []) {
  * @param bool   $clear   - Clears the error log before tracing.
  * @param array  $options - Defined in `dump()`.
  *
- * @see cc()
+ * @see cs()
  * @uses dump()
  *
  * Example usage:
@@ -575,15 +576,15 @@ c_finish_set()
  * @uses dump()
  *
  * Example usage:
- *   cc([
+ *   cs([
  *     'variable2' => $var2,
  *     'variable3' => $var3,
  *   ]);
  *
  */
-function cc($data, $clear = false, $options = []) {
+function cs($data, $clear = false, $options = []) {
   if (!is_array($data)) {
-    error_log('cc() only works with an array of data to trace');
+    error_log('cs() only works with an array of data to trace.');
     return;
   }
 
@@ -594,10 +595,11 @@ function cc($data, $clear = false, $options = []) {
   $output   = [];
   $output[] = str_repeat(':', 80);
 
-  // Show the function that's doing the trace.
+  // Show the function that's doing the variable dump.
   $backtrace = debug_backtrace();
   if (isset($backtrace[1]['function'])) {
-    $fn_name  = $backtrace[1]['function'] . '()';
+    $class    = isset($backtrace[1]['class']) ? $backtrace[1]['class'] . $backtrace[1]['type'] : '';
+    $fn_name  = $class . $backtrace[1]['function'] . '()';
     $output[] = $fn_name . '  ' . str_repeat(':', 105 - strlen($fn_name));
   }
 
