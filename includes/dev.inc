@@ -104,6 +104,31 @@ function clear_log($log_file = DEV_LOG) {
 
 
 /**
+ * Directly writes to the error log.
+ *
+ * Useful for the rare cases where `error_log()` doesn't work for whatever
+ * reason (e.g. in certain cases when using Laravel).
+ *
+ * @param mixed  $data    - Defined in `dump()`.
+ * @param string $label   - Defined in `c()`.  Special note:  If boolean false
+ *                          is used then use `var_export()` rather than `c()`.
+ * @param array  $options - Defined in `dump()`.
+ *
+ * @uses c()
+ *
+ * @todo add timestamping
+ *
+ */
+function see($data, $label = '', $options = []) {
+  $x = ($label !== false ? c($data, $label, $options, true) : var_export($data, true));
+  file_put_contents(DEV_LOG, $x, FILE_APPEND);
+}
+
+
+// -----------------------------------------------------------------------------
+
+
+/**
  * Based on:
  * http://stackoverflow.com/a/4254008/1935675
  */
@@ -368,9 +393,9 @@ function dump($data, $options = [], $indent_level = 0) {
         }
       }
 
-      $output[]          = $group_open;
-      $indent_spacing    = str_repeat($indent_unit, $indent_level);
-      $group_indent = $indent_spacing . $indent_unit;
+      $output[]       = $group_open;
+      $indent_spacing = str_repeat($indent_unit, $indent_level);
+      $group_indent   = $indent_spacing . $indent_unit;
 
       end($data);
       $last_item_key = key($data);
@@ -503,10 +528,11 @@ function trace($raw_trace, $args_shown = false, $options = []) {
 /**
  * Writes variable data into the error log in a formatted fashion.
  *
- * @param mixed  $data    - Defined in `dump()`.
- * @param string $label   - The label to associate with the data.
- * @param bool   $clear   - Clears the error log before tracing.
- * @param array  $options - Defined in `dump()`.
+ * @param mixed  $data      - Defined in `dump()`.
+ * @param string $label     - The label to associate with the data.
+ * @param array  $options   - Defined in `dump()`.
+ * @param bool   $only_dump - Returns the data dump without
+ *                            attempting to write to the log.
  *
  * @see cs()
  * @uses dump()
@@ -520,11 +546,7 @@ function trace($raw_trace, $args_shown = false, $options = []) {
  *       or this:
  *       {@link http://stackoverflow.com/a/2222404/1935675}
  */
-function c($data, $label = '', $clear = false, $options = []) {
-  if ($clear) {
-    clear_log();
-  }
-
+function c($data, $label = '', $options = [], $only_dump = false) {
   $output   = [];
   $output[] = str_repeat(':', 80);
 
@@ -548,7 +570,11 @@ function c($data, $label = '', $clear = false, $options = []) {
     $output[] = rtrim($line);
   }
 
-  error_log(implode(PHP_EOL, $output));
+  $result = implode(PHP_EOL, $output);
+  if ($only_dump) {
+    return $result;
+  }
+  error_log($result);
 }
 
 
@@ -569,7 +595,6 @@ c_finish_set()
  * @param mixed $data    - An associative array of data to be traced.
  *                         The keys of which are the labels and the
  *                         values are the data.
- * @param bool  $clear   - Clears the error log before tracing.
  * @param array $options - Defined in `dump()`.
  *
  * @see c()
@@ -582,14 +607,10 @@ c_finish_set()
  *   ]);
  *
  */
-function cs($data, $clear = false, $options = []) {
+function cs($data, $options = []) {
   if (!is_array($data)) {
-    error_log('cs() only works with an array of data to trace.');
+    error_log('cs() only works with an array of data to dump.');
     return;
-  }
-
-  if ($clear) {
-    clear_log();
   }
 
   $output   = [];
