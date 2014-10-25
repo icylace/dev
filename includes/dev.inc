@@ -84,8 +84,8 @@ function step() {
 // -----------------------------------------------------------------------------
 
 
-function backtrace() {
-  c(trace(debug_backtrace()));
+function backtrace($showing_args = false, $options = [], $skipping_first = true) {
+  c(trace(debug_backtrace(), $showing_args, $options, $skipping_first));
 }
 
 
@@ -321,7 +321,8 @@ function dump($data, $options = [], $indent_level = 0) {
   $default        = $themes['json'];
   $theme_elements = array_keys($default);
   foreach ($theme_elements as $x) {
-    $$x = isset($theme[$x]) ? $theme[$x] : $default[$x];
+    // $$x = isset($theme[$x]) ? $theme[$x] : $default[$x];
+    $$x = $theme[$x] ?: $default[$x];
   }
 
   $output = [];
@@ -484,20 +485,26 @@ function dump($data, $options = [], $indent_level = 0) {
  * Based on:
  * {@link http://us2.php.net/manual/en/function.debug-backtrace.php#85915}
  *
- * @param array $raw_trace  - The backtrace to parse.
- * @param bool  $args_shown - Renders arguments as well.
- * @param array $options    - Defined in `dump()`.
+ * @param array $raw_trace      - The backtrace to parse.
+ * @param bool  $showing_args   - Renders arguments as well.
+ * @param array $options        - Defined in `dump()`.
+ * @param bool  $skipping_first - Skips over the first backtrace entry.
+ *                                Useful for `backtrace()`.
  *
  * @return string - The formatted data.
  *
  * @uses dump()
  *
  * Example usage:
- *   c(trace(debug_backtrace()));
+ *   c(trace(debug_backtrace(), true));
  */
-function trace($raw_trace, $args_shown = false, $options = []) {
+function trace($raw_trace, $showing_args = false, $options = [], $skipping_first = false) {
   $indent_level = 0;
   $output       = [];
+
+  if ($skipping_first) {
+    array_shift($raw_trace);
+  }
 
   foreach ($raw_trace as $entry) {
     $indent_spacing = str_repeat('  ', $indent_level);
@@ -508,7 +515,7 @@ function trace($raw_trace, $args_shown = false, $options = []) {
     if (isset($entry['line'])) {
       $output[] = $indent_spacing . 'Line:  ' . $entry['line'];
     }
-    if ($args_shown && isset($entry['args'])) {
+    if ($showing_args && isset($entry['args'])) {
       $output[] = $indent_spacing . 'Args:';
       $output[] = $indent_spacing . dump($entry['args'], $options);
     }
